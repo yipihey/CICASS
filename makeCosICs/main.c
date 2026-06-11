@@ -20,6 +20,11 @@ to be set depending on the application
 #include "omp.h"
 #endif
 
+#ifdef OUTPUT_CAPI
+extern "C" int WriteCapiSnapshot(double **disdm, double **veldm, double *deltab,
+                                 double **velb, double *temp, const char *path);
+#endif
+
 
 
 /**************************Globals********************************* 
@@ -58,7 +63,11 @@ double Mpart[2];
 //globals related to interpolation array
 double DIM_ARRAY, NUMK_PAR_ARRAY;
 
+#ifdef CICASS_LIB
+extern "C" int cicass_run_genics(int argc, char *argv[])
+#else
 int main(int argc, char *argv[])
+#endif
 {
 
 #if defined(OUTPUT_GADGET) && defined(OUTPUT_ENZO)
@@ -144,6 +153,20 @@ int cic_Td = 0;
 #endif
   save_gadget_snap(grid.dis, grid.v, grid.delta[1], grid.T,
 		   SIZE*SIZE*SIZE, SIZE*SIZE*SIZE, -1);
+#endif
+
+#ifdef OUTPUT_CAPI
+  /* EnzoNG wrapper: HDF5-free raw dump of {DM particles + gas grid}. */
+  {
+#if !defined(NO_TEMPERATURE) || !defined(NO_DELTA)
+    gridDeltabAndTemperatureCIC(&grid, 0);
+    cic_Td = 1;
+#endif
+    char capifn[300];
+    sprintf(capifn, "%s/%s.cicass", OutputDir, BASEOUT);
+    WriteCapiSnapshot(grid.dis[0], grid.v[0], grid.delta[1], grid.v[1],
+                      grid.T, capifn);
+  }
 #endif
 
 

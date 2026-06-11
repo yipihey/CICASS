@@ -402,7 +402,7 @@ void returnGrowth(double G[], double z, double k, double costh)
 
 #ifdef GSL
   int calcGrowthIntGSL(double a, const double *y, double *dy, void *params);
-  gsl_odeiv2_system sys = {calcGrowthIntGSL, NULL, NUMEQNS, NULL};
+  gsl_odeiv2_system sys = {calcGrowthIntGSL, NULL, (size_t)NUMEQNS, NULL};
 
   gsl_odeiv2_driver * d =  gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rkf45,
 				    1e-3, 1e-6, 0.0);

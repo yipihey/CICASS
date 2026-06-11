@@ -1,0 +1,12 @@
+# EnzoNG wrapper build artifacts (this fork)
+build/
+*.o
+*.x
+*.dylib
+*.so
+
+# generated power-spectrum / IC products
+makeCosICs/*.pk
+makeCosICs/initSimCart*.dat
+makeCosICs/*.cicass
+vbc_transfer/IC_outputs/initSimCart*.dat
