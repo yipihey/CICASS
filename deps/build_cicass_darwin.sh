@@ -31,7 +31,12 @@ echo "== [1/2] vbc_transfer/transfer.x =="
 
 echo "== [2/2] makeCosICs -> libcicass_capi.dylib =="
 ( cd "$ROOT/makeCosICs"
-  OPT="-DCICASS_LIB -DOUTPUT_CAPI -DGLASS_DM -DGLASS_GAS -DLARGE_SPACING -DGSL_INTERP"
+  # Particle layout: DEFAULT = regular LATTICE (exact Lagrangian q = grid; enables
+  # AHK phase-space-sheet diagnostics + a trivial/exact displacement field).  Set
+  # CICASS_GLASS=1 to restore the pre-relaxed glass (GLASS_DM/GLASS_GAS/LARGE_SPACING).
+  GLASSOPT="${CICASS_GLASS:+-DGLASS_DM -DGLASS_GAS -DLARGE_SPACING}"
+  OPT="-DCICASS_LIB -DOUTPUT_CAPI $GLASSOPT -DGSL_INTERP"
+  echo "   particle layout: ${CICASS_GLASS:+GLASS}${CICASS_GLASS:-LATTICE}"
   CF="-O3 -fPIC -Wno-deprecated-declarations -Wno-narrowing $OPT $GSL_INC $FFTW_INC"
   OBJ=""
   for f in main io read_glass getPk enzo_out capi_out; do

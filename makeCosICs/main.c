@@ -159,8 +159,16 @@ int cic_Td = 0;
   /* EnzoNG wrapper: HDF5-free raw dump of {DM particles + gas grid}. */
   {
 #if !defined(NO_TEMPERATURE) || !defined(NO_DELTA)
-    gridDeltabAndTemperatureCIC(&grid, 0);
-    cic_Td = 1;
+    /* CICASS_SMOOTH_BARYON: write the RAW smooth Fourier-realized baryon density grid
+       (grid->delta[1] = IFFT of T_b(k)*noise, set in generateDisplacements) WITHOUT the
+       CIC interpolation to displaced-glass positions.  This is the actual CAMB/CLASS
+       baryon density field on the regular Eulerian grid, free of particle shot noise. */
+    if (getenv("CICASS_SMOOTH_BARYON") != NULL) {
+      fprintf(stderr, "#capi: SMOOTH baryon grid (raw Fourier delta_b, no glass/CIC)\n");
+    } else {
+      gridDeltabAndTemperatureCIC(&grid, 0);
+      cic_Td = 1;
+    }
 #endif
     char capifn[300];
     sprintf(capifn, "%s/%s.cicass", OutputDir, BASEOUT);
