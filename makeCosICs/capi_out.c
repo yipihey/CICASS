@@ -45,32 +45,38 @@ extern "C" int WriteCapiSnapshot(double **disdm, double **veldm, double *deltab,
     return -1;
   }
 
-  const char magic[8] = {'C','I','C','A','S','S','0','1'};
+  /* CICASS02: field body is Float32 (half the file + I/O of the old f64 "CICASS01").
+     Lossless for the consumers — the sim narrows every field to f32/f16 on load. */
+  const char magic[8] = {'C','I','C','A','S','S','0','2'};
   fwrite(magic, 1, 8, f);
   int hdr_i[2] = { SIZE, NUMSPECIES };
   fwrite(hdr_i, sizeof(int), 2, f);
   double hdr_d[10] = { BOXSIZE, ZINIT, OmegaM, OmegaB, 1.0 - OmegaM,
                        hconst, Mpart[0], Mpart[1], VSTREAM, TAVG };
-  fwrite(hdr_d, sizeof(double), 10, f);
+  fwrite(hdr_d, sizeof(double), 10, f);            /* header stays f64 (tiny) */
 
-  /* DM particles: absolute positions (grid.dis[0] is Lagrangian + displacement
-     in Mpc/h) wrapped to [0,BOXSIZE) then normalized to box fraction [0,1). */
-  double *buf = (double *) malloc(sizeof(double) * N);
+  float *buf = (float *) malloc(sizeof(float) * N);
   if (buf == NULL) { fprintf(stderr, "#capi_out: malloc failed\n"); fclose(f); return -2; }
+  /* DM particles: absolute positions (Lagrangian + displacement in Mpc/h) wrapped to
+     [0,BOXSIZE) then normalized to box fraction [0,1). */
   for (int dim = 0; dim < 3; dim++) {
-    for (long i = 0; i < N; i++)
-      buf[i] = periodic_wrap(disdm[dim][i]) / BOXSIZE;
-    fwrite(buf, sizeof(double), N, f);
+    for (long i = 0; i < N; i++) buf[i] = (float)(periodic_wrap(disdm[dim][i]) / BOXSIZE);
+    fwrite(buf, sizeof(float), N, f);
   }
-  free(buf);
-  for (int dim = 0; dim < 3; dim++)
-    fwrite(veldm[dim], sizeof(double), N, f);   /* physical peculiar km/s */
-
+  for (int dim = 0; dim < 3; dim++) {              /* DM vel, physical peculiar km/s */
+    for (long i = 0; i < N; i++) buf[i] = (float)veldm[dim][i];
+    fwrite(buf, sizeof(float), N, f);
+  }
   /* Gas on the regular grid. */
-  fwrite(deltab, sizeof(double), N, f);          /* overdensity delta_b */
-  for (int dim = 0; dim < 3; dim++)
-    fwrite(velb[dim], sizeof(double), N, f);      /* physical peculiar km/s */
-  fwrite(temp, sizeof(double), N, f);             /* relative temperature */
+  for (long i = 0; i < N; i++) buf[i] = (float)deltab[i];   /* overdensity delta_b */
+  fwrite(buf, sizeof(float), N, f);
+  for (int dim = 0; dim < 3; dim++) {              /* gas vel, physical peculiar km/s */
+    for (long i = 0; i < N; i++) buf[i] = (float)velb[dim][i];
+    fwrite(buf, sizeof(float), N, f);
+  }
+  for (long i = 0; i < N; i++) buf[i] = (float)temp[i];     /* relative temperature */
+  fwrite(buf, sizeof(float), N, f);
+  free(buf);
 
   fclose(f);
   fprintf(stderr, "#capi_out: wrote %s (N=%d, Ndm=%ld)\n", path, SIZE, N);
