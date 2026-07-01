@@ -76,6 +76,15 @@ int main(int argc, char *argv[])
 #endif
   setParams(argc, argv);
 
+#ifdef OPENMP
+  /* Parallelize the SIZE^3 FFTs across cores (the r2c/c2r plans in doFFT/doInverseFFT
+     pick up the thread count set here).  Thread count = OMP_NUM_THREADS. */
+  fftw_init_threads();
+  fftw_plan_with_nthreads(omp_get_max_threads());
+  fprintf(stdout, "#cicass: OpenMP + threaded FFTW, %d threads\n", omp_get_max_threads());
+  fflush(stdout);
+#endif
+
   int i, Nf =  (SIZE/2 +1)*SIZE*SIZE;
   struct dispGrid grid;
   double *K = NULL, *Pk = NULL;
