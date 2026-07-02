@@ -39,6 +39,12 @@ double BOXSIZE = -1;        //in Mpc/h
 int NUMSPECIES = 2;         //generally 2 species, baryons and dark matter.  
 
 int SEEDRAND = 113334;      //random number seed for calculations
+int FIXAMPL = 0;            //Angulo & Pontzen (2016) FIXED amplitude: |delta_k| = sqrt(P(k)) exactly
+                            //(random phases only) -> realized P(k) matches the input mode-by-mode,
+                            //killing box-to-box amplitude scatter.  0 = standard Rayleigh (default).
+int FLIPPHASE = 0;          //phase inversion (delta_k -> -delta_k) for the PAIRED run; average the
+                            //(FIXAMPL,FLIPPHASE=0) + (FIXAMPL,FLIPPHASE=1) pair to cancel leading
+                            //non-Gaussian variance.  0 = no flip (default).
 double ZINIT =200.;
 double AINIT, TAVG, NEAVG;  //globals that do not need to be set
 
@@ -553,10 +559,16 @@ void addGaussianField(fftw_complex *phif, fftw_complex *phidotf, fftw_complex *d
 	      l = (i*SIZE + j)*(SIZE/2 +1) + k; 
 
 	      {
+	      // Always draw the uniform (keeps the RNG stream aligned so a FIXAMPL run shares phases
+	      // with a standard run of the same seed -> directly comparable + clean pairing).  Angulo &
+	      // Pontzen fixing: since <ampl^2>=1 for the Rayleigh draw here, the FIXED amplitude is 1.
+	      double uamp;
 	      do
-		ampl= sqrt(-log(gsl_rng_uniform(random_generator2)));
-	      while(ampl == 0);
+		uamp = gsl_rng_uniform(random_generator2);
+	      while(!FIXAMPL && sqrt(-log(uamp)) == 0);
+	      ampl = FIXAMPL ? 1.0 : sqrt(-log(uamp));
 	      phase = gsl_rng_uniform(random_generator2)*2*M_PI;
+	      if(FLIPPHASE) phase += M_PI;   // paired run: delta_k -> -delta_k
 	      }
 	      g1= ampl*cos(phase);
 	      g2 = ampl*sin(phase);
@@ -988,6 +1000,12 @@ void setParams(int argc, char *argv[])
 	    break;
 	case 'R':
 	    SEEDRAND = atoi(&argv[1][2]);
+	    break;
+	case 'F':
+	    FIXAMPL = atoi(&argv[1][2]);   // Angulo & Pontzen fixed amplitude (1 = on)
+	    break;
+	case 'I':
+	    FLIPPHASE = atoi(&argv[1][2]); // paired-run phase inversion (1 = on)
 	    break;
 	case 'P':
 	    PRINT_INPUT_POWER = atoi(&argv[1][2]);
